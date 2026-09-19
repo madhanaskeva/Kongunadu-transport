@@ -1,15 +1,44 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ShieldCheck, Smartphone } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import Button from '../../../components/common/Button';
 import FormInput from '../../../components/forms/FormInput';
 
+const ROLES = {
+  admin: {
+    label: 'Admin',
+    hint: 'Web portal · Head Office',
+    icon: ShieldCheck,
+    email: 'admin@transport.example',
+    redirect: '/admin/dashboard',
+    button: 'Login to Admin Portal',
+  },
+  supervisor: {
+    label: 'Supervisor',
+    hint: 'Supervisor app · Branch',
+    icon: Smartphone,
+    email: 'supervisor@transport.example',
+    redirect: '/supervisor',
+    button: 'Login to Supervisor App',
+  },
+};
+
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loading, error } = useAuth();
-  const [email, setEmail] = useState('admin@transport.example');
+  const [searchParams] = useSearchParams();
+  const { login, loading } = useAuth();
+  const initialRole = searchParams.get('role') === 'supervisor' ? 'supervisor' : 'admin';
+  const [role, setRole] = useState(initialRole);
+  const [email, setEmail] = useState(ROLES[initialRole].email);
   const [password, setPassword] = useState('password');
   const [formError, setFormError] = useState('');
+
+  const selectRole = (next) => {
+    setRole(next);
+    setEmail(ROLES[next].email);
+    setFormError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,99 +47,132 @@ export const Login = () => {
       setFormError('Please enter both email and password.');
       return;
     }
-    const res = await login({ email, password });
+    const res = await login({ email, password, role });
     if (res.success) {
-      navigate('/admin/dashboard');
+      navigate(ROLES[role].redirect);
     } else {
       setFormError(res.error || 'Incorrect email or password.');
     }
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-        minHeight: 'calc(100vh - 70px)',
-      }}
-    >
-      {/* Brand Hero Column */}
-      <div
-        style={{
-          backgroundColor: 'var(--color-brand)',
-          color: '#ffffff',
-          padding: '64px 48px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        }}
-      >
-        <img
-          src="/assets/logo-inverse.png"
-          alt="Kongunadu Road Lines"
-          style={{ height: '44px', width: 'auto', alignSelf: 'flex-start' }}
+    <div className="krl-login">
+      <style>{`
+        .krl-login { display: grid; grid-template-columns: 46% 1fr; height: 100vh; background: #ffffff; }
+        .krl-login-image { position: relative; height: 100vh; background: url(/assets/login-hero.png) center 35% / cover no-repeat; }
+        .krl-login-form {
+          display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto;
+          background:
+            radial-gradient(circle at 100% 0%, rgba(0, 104, 71, 0.22), transparent 45%),
+            radial-gradient(circle at 0% 100%, rgba(218, 37, 29, 0.16), transparent 45%),
+            linear-gradient(135deg, #f3f9f6 0%, #ffffff 50%, #fdf3f2 100%);
+        }
+        .krl-login-card {
+          position: relative; width: 100%; max-width: 560px; margin: auto 0; padding: 48px 52px 40px;
+          display: flex; flex-direction: column; gap: 24px; box-sizing: border-box;
+          background: #ffffff; border-radius: 20px; overflow: hidden;
+          box-shadow: 0 24px 60px rgba(0, 60, 40, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .krl-login-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+          background: linear-gradient(90deg, var(--color-brand) 0 65%, var(--kr-red-600) 65% 100%);
+        }
+        @media (max-width: 900px) {
+          .krl-login { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+          .krl-login-image { height: auto; aspect-ratio: 4 / 3; background-position: center 20%; }
+          .krl-login-form { padding: 24px 16px 48px; }
+          .krl-login-card { padding: 36px 20px 28px; }
+        }
+      `}</style>
+
+      {/* Image Column */}
+      <div className="krl-login-image">
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%)',
+          }}
         />
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ position: 'absolute', left: '40px', right: '40px', bottom: '36px', color: '#ffffff' }}>
           <div
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '12px',
               fontWeight: 700,
-              letterSpacing: '0.14em',
+              letterSpacing: '0.24em',
               textTransform: 'uppercase',
-              color: 'var(--kr-green-100)',
             }}
           >
-            Admin Web Portal
+            Fueling a better tomorrow
           </div>
-          <h1
-            style={{
-              margin: '12px 0 0',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: '38px',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.1,
-              color: '#ffffff',
-            }}
-          >
-            Every vehicle movement, recorded.
-          </h1>
-          <p style={{ margin: '16px 0 0', fontSize: '16px', opacity: 0.9, maxWidth: '440px', lineHeight: 1.6 }}>
+          <p style={{ margin: '8px 0 0', fontSize: '15px', opacity: 0.9, maxWidth: '440px', lineHeight: 1.6 }}>
             700+ trucks, 300–400 trips a day, every one validated against fixed route, GPS and odometer distance.
           </p>
         </div>
       </div>
 
       {/* Login Form Column */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '48px 24px',
-        }}
-      >
-        <div style={{ width: '100%', maxWidth: '380px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="krl-login-form">
+        <div className="krl-login-card">
+          <img
+            src="/assets/logo-1600.png"
+            alt="Kongunadu Road Lines"
+            style={{ width: '240px', height: 'auto', alignSelf: 'flex-start' }}
+          />
           <div>
             <h2
               style={{
                 margin: 0,
                 fontFamily: 'var(--font-display)',
                 fontWeight: 800,
-                fontSize: '28px',
-                color: 'var(--text-heading)',
+                fontSize: '34px',
+                color: 'var(--kr-green-900)',
               }}
             >
-              Sign in
+              Welcome Back
             </h2>
-            <p style={{ margin: '6px 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>
-              Head Office administrators and owners. Supervisors use the mobile app.
+            <p style={{ margin: '6px 0 0', fontSize: '15px', color: 'var(--text-muted)' }}>
+              Choose your role and sign in to continue.
             </p>
           </div>
 
-          {(formError || error) && (
+          {/* Role Selector */}
+          <div role="radiogroup" aria-label="Sign in as" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            {Object.entries(ROLES).map(([key, r]) => {
+              const active = role === key;
+              const Icon = r.icon;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => selectRole(key)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '6px',
+                    padding: '14px 16px',
+                    borderRadius: 'var(--radius-lg)',
+                    border: `2px solid ${active ? 'var(--color-brand)' : 'var(--border-default)'}`,
+                    backgroundColor: active ? 'var(--color-brand-tint)' : '#ffffff',
+                    color: active ? 'var(--color-brand)' : 'var(--text-body)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'border-color var(--dur-fast), background var(--dur-fast)',
+                  }}
+                >
+                  <Icon size={20} />
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '16px' }}>{r.label}</span>
+                  <small style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.hint}</small>
+                </button>
+              );
+            })}
+          </div>
+
+          {formError && (
             <div
               style={{
                 padding: '12px 14px',
@@ -122,7 +184,7 @@ export const Login = () => {
                 fontWeight: 600,
               }}
             >
-              {formError || error}
+              {formError}
             </div>
           )}
 
@@ -132,7 +194,7 @@ export const Login = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@transport.example"
+              placeholder={ROLES[role].email}
               required
             />
             <FormInput
@@ -151,7 +213,7 @@ export const Login = () => {
               loading={loading}
               style={{ marginTop: '8px' }}
             >
-              Sign in to Portal
+              {ROLES[role].button}
             </Button>
           </form>
 
@@ -176,4 +238,3 @@ export const Login = () => {
 };
 
 export default Login;
-

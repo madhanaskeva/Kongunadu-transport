@@ -1,13 +1,65 @@
-﻿import React from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  Activity, ArrowDown, Building2, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Download, Ellipsis,
+  Flag, Play, Search, Tag, TriangleAlert, Truck,
+} from 'lucide-react';
 import { useTMSAdmin } from '../../../context/TMSAdminContext';
-import TripDetail from './TripDetail';
+
+const filterLabel = { display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--text-heading)' };
+const fieldWrap = { position: 'relative', display: 'flex', alignItems: 'center' };
+const fieldStyle = {
+  width: '100%',
+  height: '44px',
+  boxSizing: 'border-box',
+  padding: '0 34px 0 38px',
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  borderRadius: '10px',
+  border: '1px solid #d5dfda',
+  background: '#fff',
+  fontSize: '14px',
+  color: 'var(--text-heading)',
+  cursor: 'pointer',
+};
+const iconLeft = { position: 'absolute', left: '12px', pointerEvents: 'none', color: 'var(--kr-grey-700)' };
+const iconRight = { position: 'absolute', right: '12px', pointerEvents: 'none', color: 'var(--kr-grey-700)' };
+
+const FilterSelect = ({ label, icon: Icon, value, onChange, allLabel, options, width }) => (
+  <div style={{ width, flex: 'none' }}>
+    <label style={filterLabel}>{label}</label>
+    <div style={fieldWrap}>
+      <Icon size={17} style={iconLeft} />
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)} style={fieldStyle}>
+        <option value="">{allLabel}</option>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <ChevronDown size={17} style={iconRight} />
+    </div>
+  </div>
+);
+
+const pageBtn = (active, disabled) => ({
+  all: 'unset',
+  cursor: disabled ? 'default' : 'pointer',
+  boxSizing: 'border-box',
+  minWidth: '36px',
+  height: '36px',
+  padding: '0 8px',
+  display: 'grid',
+  placeItems: 'center',
+  borderRadius: '8px',
+  fontSize: '14px',
+  fontWeight: 700,
+  border: `1px solid ${active ? 'var(--kr-green-700)' : '#d5dfda'}`,
+  background: active ? 'var(--kr-green-700)' : '#fff',
+  color: active ? '#fff' : disabled ? 'var(--kr-grey-300)' : 'var(--text-heading)',
+});
 
 export const TripList = () => {
   const {
     T,
     tf,
     setTf,
-    selectedTrip,
     setSelectedTrip,
     navTo,
     deleted,
@@ -44,7 +96,7 @@ export const TripList = () => {
       badgeFg,
       typeLabel: t.type + (t.reason ? ' · ' + t.reason : ''),
       flagText: flags.join(', ') || '—',
-      flagColor: flags.length ? '#7A4300' : 'var(--text-muted)',
+      flagColor: flags.length ? badgeFg : 'var(--text-muted)',
       hasFlags: flags.length > 0,
     };
   });
@@ -65,103 +117,107 @@ export const TripList = () => {
   const typeOptions = [{ value: 'Business', label: 'Business' }, { value: 'Non-Business', label: 'Non-Business' }];
   const flagOptions = [{ value: 'flagged', label: 'Flagged only' }, { value: 'clean', label: 'No flags' }];
 
-  const tripCols = ['Trip number', 'Branch', 'Vehicle', 'Driver', 'Client · unloading', 'Type', 'Opened', 'Status', 'Flags'];
+  const tripCols = ['Trip number', 'Branch', 'Vehicle', 'Driver', 'Client · unloading', 'Type', 'Opened', 'Status', 'Flags', 'Actions'];
   const tripEnrouteCount = tripRows.filter(t => t.status === 'Enroute').length;
 
-  const clearTf = () => setTf({ branch: '', status: '', type: '', flag: '', q: '' });
+  const [draftQ, setDraftQ] = useState(tf.q || '');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => { setDraftQ(tf.q || ''); }, [tf.q]);
+  useEffect(() => { setPage(1); }, [tf.branch, tf.status, tf.type, tf.flag, tf.q, pageSize]);
+
+  const pageCount = Math.max(1, Math.ceil(tripRows.length / pageSize));
+  const curPage = Math.min(page, pageCount);
+  const pageRows = tripRows.slice((curPage - 1) * pageSize, curPage * pageSize);
+  const firstShown = tripRows.length ? (curPage - 1) * pageSize + 1 : 0;
+  const lastShown = Math.min(curPage * pageSize, tripRows.length);
+
+  const clearTf = () => {
+    setDraftQ('');
+    setTf({ branch: '', status: '', type: '', flag: '', q: '' });
+  };
+  const runSearch = () => setTf({ ...tf, q: draftQ.trim() });
 
   const exportTrips = () => {
     showToast('success', 'Export started', `${tripRows.length} trips · Excel will download shortly.`);
   };
 
+  const openTrip = (id) => {
+    setSelectedTrip(id);
+    navTo('trip', { selectedTrip: id });
+  };
+
+  const kpis = [
+    { label: 'Total Trips', value: trips.length, note: 'All recorded trips', icon: Truck, bg: 'var(--st-enroute-bg)', fg: 'var(--st-enroute-edge)' },
+    { label: 'Enroute', value: trips.filter(t => t.status === 'Enroute').length, note: 'Active trips on road', icon: Play, bg: 'var(--kr-green-100)', fg: 'var(--kr-green-700)' },
+    { label: 'Closed', value: trips.filter(t => t.status === 'Closed').length, note: 'Completed trips', icon: CircleCheck, bg: 'var(--kr-green-100)', fg: 'var(--kr-green-600)' },
+    { label: 'Exceptions', value: trips.filter(t => t.hasFlags).length, note: 'Needs attention', icon: TriangleAlert, bg: 'var(--kr-red-100)', fg: 'var(--kr-red-600)' },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px' }}>
+        {kpis.map(k => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="tms-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px' }}>
+              <span style={{ flex: 'none', width: '54px', height: '54px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: k.bg, color: k.fg }}>
+                <Icon size={26} strokeWidth={2.2} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-heading)' }}>{k.label}</div>
+                <div style={{ marginTop: '2px', fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 800, color: 'var(--kr-grey-900)' }}>{k.value}</div>
+              </div>
+              <div style={{ alignSelf: 'flex-end', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'right' }}>{k.note}</div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Filters Bar */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          alignItems: 'flex-end',
-          background: '#fff',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '16px',
-        }}
-      >
-        <div style={{ width: '180px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Branch</label>
-          <select
-            value={tf.branch || ''}
-            onChange={(e) => setTf({ ...tf, branch: e.target.value })}
-            style={{ height: '40px', padding: '0 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', fontSize: '14px' }}
-          >
-            <option value="">All branches</option>
-            {branchOptions.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-          </select>
-        </div>
+      <div className="tms-card" style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'flex-end', padding: '18px 20px' }}>
+        <FilterSelect label="Branch" icon={Building2} width="190px" value={tf.branch} allLabel="All branches" options={branchOptions} onChange={(v) => setTf({ ...tf, branch: v })} />
+        <FilterSelect label="Status" icon={Activity} width="170px" value={tf.status} allLabel="All statuses" options={statusOptions} onChange={(v) => setTf({ ...tf, status: v })} />
+        <FilterSelect label="Type" icon={Tag} width="160px" value={tf.type} allLabel="All types" options={typeOptions} onChange={(v) => setTf({ ...tf, type: v })} />
+        <FilterSelect label="Flags" icon={Flag} width="160px" value={tf.flag} allLabel="Any" options={flagOptions} onChange={(v) => setTf({ ...tf, flag: v })} />
 
-        <div style={{ width: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Status</label>
-          <select
-            value={tf.status || ''}
-            onChange={(e) => setTf({ ...tf, status: e.target.value })}
-            style={{ height: '40px', padding: '0 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', fontSize: '14px' }}
-          >
-            <option value="">All statuses</option>
-            {statusOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </div>
-
-        <div style={{ width: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Type</label>
-          <select
-            value={tf.type || ''}
-            onChange={(e) => setTf({ ...tf, type: e.target.value })}
-            style={{ height: '40px', padding: '0 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', fontSize: '14px' }}
-          >
-            <option value="">All types</option>
-            {typeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </div>
-
-        <div style={{ width: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Flags</label>
-          <select
-            value={tf.flag || ''}
-            onChange={(e) => setTf({ ...tf, flag: e.target.value })}
-            style={{ height: '40px', padding: '0 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', fontSize: '14px' }}
-          >
-            <option value="">Any</option>
-            {flagOptions.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-          </select>
-        </div>
-
-        <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Search</label>
-          <input
-            type="text"
-            placeholder="Trip no., vehicle, driver"
-            value={tf.q || ''}
-            onChange={(e) => setTf({ ...tf, q: e.target.value })}
-            style={{ height: '40px', padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', fontSize: '14px' }}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={clearTf}
-          style={{ all: 'unset', cursor: 'pointer', height: '40px', padding: '0 16px', borderRadius: 'var(--radius-md)', fontSize: '14px', fontWeight: 700, color: 'var(--text-heading)' }}
+        <form
+          onSubmit={(e) => { e.preventDefault(); runSearch(); }}
+          style={{ flex: 1, minWidth: '260px', display: 'flex', gap: '10px', alignItems: 'center' }}
         >
-          Clear
-        </button>
+          <div style={{ ...fieldWrap, flex: 1 }}>
+            <Search size={17} style={iconLeft} />
+            <input
+              type="text"
+              placeholder="Trip no., vehicle, driver, client..."
+              value={draftQ}
+              onChange={(e) => setDraftQ(e.target.value)}
+              style={{ ...fieldStyle, cursor: 'text', padding: '0 12px 0 38px' }}
+            />
+          </div>
+          <button
+            type="submit"
+            style={{ all: 'unset', cursor: 'pointer', height: '44px', padding: '0 24px', borderRadius: '10px', background: 'var(--kr-green-700)', color: '#fff', fontSize: '14px', fontWeight: 700 }}
+          >
+            Search
+          </button>
+          <button
+            type="button"
+            onClick={clearTf}
+            style={{ all: 'unset', cursor: 'pointer', height: '44px', boxSizing: 'border-box', padding: '0 20px', borderRadius: '10px', border: '1px solid #d5dfda', background: '#fff', fontSize: '14px', fontWeight: 700, color: 'var(--text-heading)' }}
+          >
+            Clear
+          </button>
+        </form>
       </div>
 
       {/* Table Container */}
-      <div style={{ background: '#fff', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 18px', borderBottom: '1px solid var(--border-default)', gap: '12px', flexWrap: 'wrap' }}>
+      <div className="tms-card" style={{ overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 20px', borderBottom: '1px solid #e3e9e6', gap: '12px', flexWrap: 'wrap' }}>
           {/* Status Tabs */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
             {[
               { id: '', label: 'All', count: statusPool.length },
               { id: 'Enroute', label: 'Enroute', count: statusPool.filter(t => t.status === 'Enroute').length },
@@ -175,24 +231,24 @@ export const TripList = () => {
                   style={{
                     all: 'unset',
                     cursor: 'pointer',
-                    padding: '12px 16px',
-                    fontSize: '14px',
+                    padding: '16px 22px 13px',
+                    fontSize: '15px',
                     fontWeight: 700,
-                    borderBottom: `3px solid ${on ? 'var(--color-brand)' : 'transparent'}`,
-                    color: on ? 'var(--color-brand)' : 'var(--text-muted)',
+                    borderBottom: `3px solid ${on ? 'var(--kr-green-700)' : 'transparent'}`,
+                    color: on ? 'var(--kr-green-700)' : 'var(--text-heading)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                   }}
                 >
                   {tab.label}
-                  <span style={{ fontSize: '12px', opacity: 0.8 }}>({tab.count})</span>
+                  <span style={{ fontSize: '13px', fontWeight: on ? 700 : 500, color: on ? 'var(--kr-green-700)' : 'var(--text-muted)' }}>({tab.count})</span>
                 </button>
               );
             })}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 0', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px 0', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
               <strong style={{ color: 'var(--text-heading)' }}>{tripRows.length}</strong> trips · {tripEnrouteCount} enroute
             </span>
@@ -201,16 +257,20 @@ export const TripList = () => {
               style={{
                 all: 'unset',
                 cursor: 'pointer',
-                height: '32px',
-                padding: '0 12px',
-                borderRadius: 'var(--radius-md)',
-                background: 'transparent',
-                color: 'var(--color-brand)',
-                border: '1px solid var(--color-brand)',
-                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                height: '38px',
+                padding: '0 16px',
+                boxSizing: 'border-box',
+                borderRadius: '10px',
+                color: 'var(--kr-green-800)',
+                border: '1px solid var(--kr-green-700)',
+                fontSize: '14px',
                 fontWeight: 700,
               }}
             >
+              <Download size={17} />
               Export Excel
             </button>
           </div>
@@ -218,62 +278,96 @@ export const TripList = () => {
 
         {/* Table */}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '960px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '1080px' }}>
             <thead>
-              <tr style={{ textAlign: 'left', background: 'var(--surface-muted)' }}>
-                {tripCols.map((c, i) => (
-                  <th key={i} style={{ padding: '10px 14px', fontFamily: 'var(--font-display)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {c}
+              <tr style={{ textAlign: 'left', background: '#f7faf9' }}>
+                {tripCols.map((c) => (
+                  <th
+                    key={c}
+                    style={{
+                      padding: '12px 16px',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'var(--kr-grey-700)',
+                      whiteSpace: 'nowrap',
+                      textAlign: c === 'Actions' ? 'center' : 'left',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {c}
+                      {c === 'Opened' && <ArrowDown size={13} />}
+                    </span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {tripRows.map((t) => (
+              {pageRows.map((t) => (
                 <tr
                   key={t.id}
-                  onClick={() => {
-                    setSelectedTrip(t.id);
-                    navTo('trip', { selectedTrip: t.id });
-                  }}
-                  style={{ cursor: 'pointer', borderTop: '1px solid var(--border-default)' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-muted)'}
+                  onClick={() => openTrip(t.id)}
+                  style={{ cursor: 'pointer', borderTop: '1px solid #edf1ef' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f5faf7'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-heading)', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-heading)', whiteSpace: 'nowrap' }}>
                     {t.number}
                   </td>
-                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>{t.branchName}</td>
-                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', color: 'var(--text-heading)', fontWeight: 600 }}>{t.vehicleNumber}</td>
-                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>{t.driverName}</td>
-                  <td style={{ padding: '12px 14px', maxWidth: '260px' }}>
-                    <span style={{ display: 'block', color: 'var(--text-heading)' }}>{t.clientName}</span>
+                  <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{t.branchName}</td>
+                  <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: 'var(--text-heading)', fontWeight: 700 }}>{t.vehicleNumber}</td>
+                  <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{t.driverName}</td>
+                  <td style={{ padding: '12px 16px', maxWidth: '260px' }}>
+                    <span style={{ display: 'block', color: 'var(--text-heading)', fontWeight: 600 }}>{t.clientName}</span>
                     <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {t.unloading}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>{t.typeLabel}</td>
-                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{t.opened}</td>
-                  <td style={{ padding: '12px 14px' }}>
+                  <td style={{ padding: '12px 16px', fontSize: '13px', maxWidth: '150px' }}>{t.typeLabel}</td>
+                  <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: 'var(--text-body)' }}>{t.opened}</td>
+                  <td style={{ padding: '12px 16px' }}>
                     <span
                       style={{
                         display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
                         fontFamily: 'var(--font-display)',
                         fontSize: '11px',
                         fontWeight: 700,
-                        letterSpacing: '0.1em',
+                        letterSpacing: '0.08em',
                         textTransform: 'uppercase',
-                        padding: '3px 8px',
-                        borderRadius: 'var(--radius-sm)',
+                        whiteSpace: 'nowrap',
+                        padding: '4px 10px',
+                        borderRadius: '999px',
                         background: t.badgeBg,
                         color: t.badgeFg,
                       }}
                     >
+                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'currentColor' }} />
                       {t.badge}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 14px', fontSize: '13px', color: t.flagColor, whiteSpace: 'nowrap' }}>
-                    {t.flagText}
+                  <td style={{ padding: '12px 16px', fontSize: '13px', color: t.flagColor, minWidth: '160px', maxWidth: '220px' }}>
+                    {t.hasFlags ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4 }}>
+                        <Flag size={13} fill="currentColor" style={{ flex: 'none', marginTop: '2px' }} />
+                        {t.flagText}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openTrip(t.id); }}
+                      aria-label={`Open trip ${t.number}`}
+                      title="Open trip"
+                      style={{ all: 'unset', cursor: 'pointer', width: '32px', height: '32px', display: 'inline-grid', placeItems: 'center', borderRadius: '8px', color: 'var(--kr-grey-700)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--kr-green-100)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Ellipsis size={20} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -298,11 +392,32 @@ export const TripList = () => {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderTop: '1px solid var(--border-default)', fontSize: '13px', color: 'var(--text-muted)' }}>
-          <span>Showing {tripRows.length} of {tripRows.length}</span>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button disabled style={{ all: 'unset', opacity: 0.5, padding: '0 8px', height: '28px' }}>Previous</button>
-            <button disabled style={{ all: 'unset', opacity: 0.5, padding: '0 8px', height: '28px' }}>Next</button>
+        {/* Pagination */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', padding: '14px 20px', borderTop: '1px solid #e3e9e6', fontSize: '13px', color: 'var(--text-muted)' }}>
+          <span>Showing {firstShown} to {lastShown} of {tripRows.length} trips</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button disabled={curPage === 1} onClick={() => setPage(curPage - 1)} aria-label="Previous page" style={pageBtn(false, curPage === 1)}>
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: pageCount }, (_, i) => i + 1).map(n => (
+              <button key={n} onClick={() => setPage(n)} aria-current={n === curPage ? 'page' : undefined} style={pageBtn(n === curPage, false)}>
+                {n}
+              </button>
+            ))}
+            <button disabled={curPage === pageCount} onClick={() => setPage(curPage + 1)} aria-label="Next page" style={pageBtn(false, curPage === pageCount)}>
+              <ChevronRight size={18} />
+            </button>
+            <div style={{ ...fieldWrap, marginLeft: '12px' }}>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                aria-label="Rows per page"
+                style={{ ...fieldStyle, width: '110px', height: '36px', padding: '0 30px 0 12px', fontWeight: 600 }}
+              >
+                {[10, 25, 50].map(n => <option key={n} value={n}>{n} / page</option>)}
+              </select>
+              <ChevronDown size={16} style={iconRight} />
+            </div>
           </div>
         </div>
       </div>

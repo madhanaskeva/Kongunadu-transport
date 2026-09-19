@@ -1,10 +1,12 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { CalendarDays, ChevronRight } from 'lucide-react';
 import { useTMSAdmin, TMSAdminProvider } from '../../context/TMSAdminContext';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import AdminDrawer from './AdminDrawer';
 import { AdminConfirmDialog, AdminToast } from './AdminConfirmDialog';
+import { getPageMeta } from './pageMeta';
 import './adminLayout.css';
 
 const AdminLayoutContent = () => {
@@ -17,6 +19,12 @@ const AdminLayoutContent = () => {
     navTo,
     width,
   } = useTMSAdmin();
+
+  const location = useLocation();
+  const meta = getPageMeta(location.pathname);
+  const now = new Date();
+  const todayLabel = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const dayLabel = now.toLocaleDateString('en-IN', { weekday: 'long' });
 
   const narrow = width < 900;
   const tms = T();
@@ -70,7 +78,10 @@ const AdminLayoutContent = () => {
     : [];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'stretch' }}>
+    <div className="tms-shell">
+      <AdminHeader onOpenNav={() => setNavOpen(true)} narrow={narrow} />
+
+      <div className="tms-body">
       {/* Mobile Scrim / Desktop Sidebar */}
       {(narrow ? navOpen : true) && (
         <div
@@ -82,10 +93,10 @@ const AdminLayoutContent = () => {
             background: narrow ? 'rgba(20,32,43,.45)' : 'transparent',
             display: 'flex',
             flex: 'none',
-            width: narrow ? 'auto' : '264px',
+            width: narrow ? 'auto' : '246px',
           }}
         >
-          <div onClick={(e) => e.stopPropagation()}>
+          <div onClick={(e) => e.stopPropagation()} className={narrow ? 'tms-sidebar-drawer' : undefined}>
             <AdminSidebar onClose={() => setNavOpen(false)} />
           </div>
         </div>
@@ -93,8 +104,6 @@ const AdminLayoutContent = () => {
 
       {/* Main Column */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <AdminHeader onOpenNav={() => setNavOpen(true)} />
-
         {/* Global Search Overlay */}
         {searching ? (
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -155,11 +164,30 @@ const AdminLayoutContent = () => {
             )}
           </div>
         ) : (
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, boxSizing: 'border-box' }}>
+          <div style={{ padding: narrow ? '16px' : '20px 28px 28px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, boxSizing: 'border-box' }}>
+            <div className="tms-pagehead">
+              <div style={{ minWidth: 0 }}>
+                <div className="tms-pagehead-crumb">
+                  {meta.crumb}
+                  <ChevronRight size={14} />
+                  <strong>{meta.title}</strong>
+                </div>
+                <h1>{meta.title}</h1>
+                {meta.sub && <p>{meta.sub}</p>}
+              </div>
+              <div className="tms-pagehead-date">
+                <CalendarDays size={20} color="var(--kr-grey-700)" />
+                <span>
+                  <strong>Today, {todayLabel}</strong>
+                  <small>{dayLabel}</small>
+                </span>
+              </div>
+            </div>
             <Outlet />
           </div>
         )}
       </main>
+      </div>
 
       {/* Global Slide-In Drawer */}
       <AdminDrawer />

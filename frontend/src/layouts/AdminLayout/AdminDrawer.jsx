@@ -201,23 +201,28 @@ export const AdminDrawer = () => {
         zIndex: 60,
         background: 'rgba(20,32,43,.45)',
         display: 'flex',
-        justifyContent: 'flex-end',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
       }}
     >
       <aside
         role="dialog"
+        aria-modal="true"
         aria-label={drawer.title}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: '480px',
+          maxWidth: '560px',
+          maxHeight: 'calc(100vh - 32px)',
           background: '#fff',
-          height: '100%',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
+          borderRadius: 'var(--radius-lg, 12px)',
           boxShadow: 'var(--shadow-lg)',
-          borderLeft: '6px solid var(--color-brand)',
-          animation: 'tmsSlideIn var(--dur-base) var(--ease-out)',
+          borderTop: '6px solid var(--color-brand)',
+          animation: 'tmsFadeIn var(--dur-base) var(--ease-out)',
         }}
       >
         {/* Drawer Header */}
@@ -279,6 +284,7 @@ export const AdminDrawer = () => {
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: 'auto',
             padding: '20px 24px',
             display: 'flex',

@@ -11,13 +11,22 @@ export const useAuth = () => {
       // Mock login authentication
       await new Promise((resolve) => setTimeout(resolve, 600));
       if (credentials.email && credentials.password) {
-        const user = {
-          id: 'A01',
-          name: 'Head Office Admin',
-          email: credentials.email,
-          role: 'Administrator',
-          branch: 'All branches',
-        };
+        const user =
+          credentials.role === 'supervisor'
+            ? {
+                id: 'S01',
+                name: 'Branch Supervisor',
+                email: credentials.email,
+                role: 'Supervisor',
+                branch: 'Coimbatore',
+              }
+            : {
+                id: 'A01',
+                name: 'Head Office Admin',
+                email: credentials.email,
+                role: 'Administrator',
+                branch: 'All branches',
+              };
         dispatch(loginSuccess(user));
         return { success: true };
       } else {

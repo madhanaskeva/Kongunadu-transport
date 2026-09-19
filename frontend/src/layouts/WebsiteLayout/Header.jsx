@@ -24,7 +24,7 @@ export const Header = () => {
           <Link to="/services" className="website-nav-link">Services</Link>
           <Link to="/contact" className="website-nav-link">Contact</Link>
           <Link to="/login" style={{ marginLeft: '12px' }}>
-            <Button variant="primary" size="sm">Admin Portal</Button>
+            <Button variant="primary" size="sm">Login</Button>
           </Link>
         </nav>
       </div>
