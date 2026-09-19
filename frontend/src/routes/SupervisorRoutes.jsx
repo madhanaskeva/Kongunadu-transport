@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route, Navigate } from 'react-router-dom';
-import SupervisorApp from '../../pages/supervisor/SupervisorApp';
+import SupervisorApp from '../pages/supervisor/SupervisorApp';
 
 export const SupervisorRoutes = (
   <>

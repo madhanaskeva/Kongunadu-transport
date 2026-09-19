@@ -1,12 +1,12 @@
 import React from 'react';
 import { Route, Navigate } from 'react-router-dom';
-import AdminLayout from '../../layouts/AdminLayout/AdminLayout';
-import Dashboard from '../../pages/admin/Dashboard/Dashboard';
-import TripList from '../../pages/admin/Trips/TripList';
-import TripDetail from '../../pages/admin/Trips/TripDetail';
-import Exceptions from '../../pages/admin/Exceptions/Exceptions';
-import FleetMonitor from '../../pages/admin/Fleet/FleetMonitor';
-import DistanceVariation from '../../pages/admin/Distance/DistanceVariation';
+import AdminLayout from '../layouts/AdminLayout/AdminLayout';
+import Dashboard from '../pages/admin/Dashboard/Dashboard';
+import TripList from '../pages/admin/Trips/TripList';
+import TripDetail from '../pages/admin/Trips/TripDetail';
+import Exceptions from '../pages/admin/Exceptions/Exceptions';
+import FleetMonitor from '../pages/admin/Fleet/FleetMonitor';
+import DistanceVariation from '../pages/admin/Distance/DistanceVariation';
 import {
   BranchMaster,
   SupervisorMaster,
@@ -15,13 +15,13 @@ import {
   ClientMaster,
   LocationMaster,
   RouteMaster,
-} from '../../pages/admin/Masters';
-import Attendance from '../../pages/admin/Attendance/Attendance';
-import Analytics from '../../pages/admin/Analytics/Analytics';
-import Reports from '../../pages/admin/Reports/Reports';
-import UserList from '../../pages/admin/Users/UserList';
-import Settings from '../../pages/admin/Settings/Settings';
-import DeviceApprovals from '../../pages/admin/DeviceApprovals/DeviceApprovals';
+} from '../pages/admin/Masters';
+import Attendance from '../pages/admin/Attendance/Attendance';
+import Analytics from '../pages/admin/Analytics/Analytics';
+import Reports from '../pages/admin/Reports/Reports';
+import UserList from '../pages/admin/Users/UserList';
+import Settings from '../pages/admin/Settings/Settings';
+import DeviceApprovals from '../pages/admin/DeviceApprovals/DeviceApprovals';
 
 export const AdminRoutes = (
   <Route path="admin" element={<AdminLayout />}>
